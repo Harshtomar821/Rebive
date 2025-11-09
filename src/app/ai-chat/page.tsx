@@ -25,7 +25,7 @@ export default function AIChat() {
       emoji: "🕊️",
       desc: "Calm, wise, and logical — Ram will guide you with patience and clarity.",
       color: "from-blue-500 to-indigo-500",
-      img: "/ram.jpg",
+      img: "/Ram.jpg",
       href: "/chat-ram",
     },
     {

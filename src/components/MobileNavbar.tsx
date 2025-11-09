@@ -30,6 +30,7 @@ import {
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { chatNotify } from "@/actions/stream.action";
+import { useRouter } from "next/navigation"; // 👈 Added
 
 function MobileNavbar() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -38,6 +39,7 @@ function MobileNavbar() {
   const { theme, setTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter(); // 👈 Added router
 
   // 🔁 Fetch unread message count every 10s
   useEffect(() => {
@@ -64,6 +66,12 @@ function MobileNavbar() {
     };
   }, []);
 
+  // 👇 This will handle navigation and close sidebar
+  const handleNavigate = (path: string) => {
+    setShowMobileMenu(false); // close sidebar
+    router.push(path); // navigate
+  };
+
   return (
     <div className="flex md:hidden items-center space-x-2 relative">
       {/* 🌙 Theme Toggle */}
@@ -74,19 +82,6 @@ function MobileNavbar() {
       >
         <SunIcon className="h-5 w-5 rotate-0 dark:-rotate-90 transition-all" />
         <MoonIcon className="absolute h-5 w-5 rotate-90 dark:rotate-0 transition-all" />
-      </Button>
-
-      {/* 🧑‍🤝‍🧑 Follow User */}
-      <Button
-        variant="outline"
-        size="sm"
-        asChild
-        className="text-pink-600 font-semibold border-pink-600 hover:bg-indigo-50 dark:hover:bg-indigo-900 dark:text-pink-300 transition-all"
-      >
-        <Link href="/follow" className="flex items-center gap-2">
-          <UserPlusIcon className="w-4 h-4" />
-          Follow User
-        </Link>
       </Button>
 
       {/* 📱 Mobile Menu */}
@@ -104,22 +99,18 @@ function MobileNavbar() {
 
           <nav className="flex flex-col space-y-4 mt-6">
             {/* 🏠 Home */}
-            <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center gap-3">
-                <HomeIcon className="w-4 h-4" />
-                Home
-              </Link>
+            <Button variant="ghost" onClick={() => handleNavigate("/")}>
+              <HomeIcon className="w-4 h-4" />
+              Home
             </Button>
 
             {/* 🤖 AI Chat */}
             <Button
-              asChild
               className="bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center gap-3"
+              onClick={() => handleNavigate("/ai-chat")}
             >
-              <Link href="/ai-chat">
-                <BotIcon className="w-4 h-4" />
-                Chat with AI
-              </Link>
+              <BotIcon className="w-4 h-4" />
+              Chat with AI
             </Button>
 
             {isSignedIn ? (
@@ -128,13 +119,11 @@ function MobileNavbar() {
                 <div className="relative">
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-3 text-pink-600 font-semibold"
-                    asChild
+                    className="flex items-center gap-3 text-pink-600 font-semibold pl-9"
+                    onClick={() => handleNavigate("/chat")}
                   >
-                    <Link href="/chat">
-                      <MessageCircleIcon className="w-4 h-4" />
+                    <MessageCircleIcon className="w-4 h-4 " />
                       Chat with friends
-                    </Link>
                   </Button>
 
                   {unreadCount > 0 && (
@@ -144,29 +133,40 @@ function MobileNavbar() {
                   )}
                 </div>
 
+                {/* 🧑‍🤝‍🧑 Follow */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-pink-600 font-semibold border-pink-600 hover:bg-indigo-50 dark:hover:bg-indigo-900 dark:text-pink-300 transition-all"
+                  onClick={() => handleNavigate("/follow")}
+                >
+                  <UserPlusIcon className="w-4 h-4" />
+                  Follow Users
+                </Button>
+
                 {/* 🔔 Notifications */}
-                <Button variant="ghost" asChild>
-                  <Link
-                    href="/notifications"
-                    className="flex items-center gap-3"
-                  >
-                    <BellIcon className="w-4 h-4" />
-                    Notifications
-                  </Link>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigate("/notifications")}
+                >
+                  <BellIcon className="w-4 h-4" />
+                  Notifications
                 </Button>
 
                 {/* 👤 Profile */}
-                <Button variant="ghost" asChild>
-                  <Link
-                    href={`/profile/${
-                      user?.username ??
-                      user?.primaryEmailAddress?.emailAddress.split("@")[0]
-                    }`}
-                    className="flex items-center gap-3"
-                  >
-                    <UserIcon className="w-4 h-4" />
-                    Profile
-                  </Link>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    handleNavigate(
+                      `/profile/${
+                        user?.username ??
+                        user?.primaryEmailAddress?.emailAddress.split("@")[0]
+                      }`
+                    )
+                  }
+                >
+                  <UserIcon className="w-4 h-4" />
+                  Profile
                 </Button>
 
                 {/* 🚪 Logout */}

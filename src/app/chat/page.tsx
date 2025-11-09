@@ -13,118 +13,142 @@ import ChatLoader from "@/components/ChatLoader";
 
 const STREAM_API_KEY = process.env.NEXT_PUBLIC_STREAM_API_KEY!;
 
-// ✅ Cache client globally to avoid re-connects
+// ✅ Keep client globally cached to avoid unnecessary reconnects
 let globalClient: StreamChat | null = null;
-let isClientConnecting = false;
+
+interface ChatChannel {
+  id: string;
+  name: string;
+  username: string;
+  image: string;
+  lastMessageAt?: string;
+  unreadCount: number;
+  clerkId: string;
+}
 
 export default function ChatListPage() {
   const { user, isLoaded } = useUser();
-  const [channels, setChannels] = useState<any[]>([]);
+  const [channels, setChannels] = useState<ChatChannel[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Function to safely connect or reconnect Stream client
+  const connectAndLoad = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // ✅ Reuse existing Stream client or create new
+      let client = globalClient ?? StreamChat.getInstance(STREAM_API_KEY);
+
+      // ✅ Access internal connection state safely
+      const state = (client as any)?.connectionState;
+
+      // ✅ Reconnect if user not connected or connection invalid
+      if (
+        !client.userID ||
+        state === "disconnecting" ||
+        state === "disconnected"
+      ) {
+        console.log("🔄 Reconnecting Stream client...");
+
+        if (state === "disconnecting" || state === "disconnected") {
+          await client.disconnectUser().catch(() => null);
+        }
+
+        const token = await getStreamTokenAction();
+
+        await client.connectUser(
+          {
+            id: user.id,
+            name: user.fullName || user.username || "User",
+            image: user.imageUrl || "/avatar.png",
+          },
+          token
+        );
+
+        globalClient = client;
+        console.log("✅ Stream client connected");
+      }
+
+      // ✅ Query user’s channels
+      const userChannels = await client.queryChannels(
+        { type: "messaging", members: { $in: [user.id] } },
+        { last_message_at: -1 },
+        { limit: 30 }
+      );
+
+      const formatted: ChatChannel[] = userChannels.map((ch) => {
+        const otherMember = Object.values(ch.state.members || {}).find(
+          (m: any) => m.user?.id !== user.id
+        ) as any;
+
+        return {
+          id: ch.id ?? "", // ensure string
+          name: otherMember?.user?.name || "Unknown",
+          username:
+            otherMember?.user?.username ||
+            otherMember?.user?.id?.slice(0, 8) ||
+            "unknown",
+          image: otherMember?.user?.image || "/avatar.png",
+          lastMessageAt: ch.state.last_message_at
+            ? new Date(ch.state.last_message_at).toISOString()
+            : "",
+          unreadCount: ch.countUnread() ?? 0,
+          clerkId: otherMember?.user?.id ?? "",
+        };
+      });
+
+      setChannels(formatted);
+      setLoading(false);
+
+      // ✅ Realtime updates: move chat to top on new message
+      client.on("message.new", (event) => {
+        const chanId = event.channel_id;
+        if (!chanId) return;
+
+        setChannels((prev) => {
+          const updated = [...prev];
+          const index = updated.findIndex((c) => c.id === chanId);
+          if (index !== -1) {
+            const [moved] = updated.splice(index, 1);
+            moved.lastMessageAt = new Date().toISOString();
+            moved.unreadCount = (moved.unreadCount ?? 0) + 1;
+            updated.unshift(moved);
+          }
+          return [...updated];
+        });
+      });
+    } catch (err) {
+      console.error("❌ Stream setup error:", err);
+      setLoading(false);
+    }
+  };
+
+  // ✅ Initial load + auto reconnect when user comes back
   useEffect(() => {
     if (!isLoaded || !user) return;
 
-    let active = true;
+    connectAndLoad();
 
-    const initChatList = async () => {
-      try {
-        setLoading(true);
-
-        // ✅ Reuse existing client or create new
-        let client = globalClient ?? StreamChat.getInstance(STREAM_API_KEY);
-
-        // ✅ If not connected, connect once globally
-        if (!client.userID && !isClientConnecting) {
-          isClientConnecting = true;
-          const token = await getStreamTokenAction();
-
-          await client.connectUser(
-            {
-              id: user.id,
-              name: user.fullName || user.username || "User",
-              image: user.imageUrl || "/avatar.png",
-            },
-            token
-          );
-
-          globalClient = client;
-          isClientConnecting = false;
-        }
-
-        // 🔄 Wait until client is connected
-        let retries = 0;
-        while (!client.userID && retries < 10) {
-          await new Promise((res) => setTimeout(res, 200));
-          retries++;
-        }
-
-        if (!client.userID) throw new Error("Client not connected");
-
-        // ✅ Query channels safely
-        const userChannels = await client.queryChannels(
-          { type: "messaging", members: { $in: [user.id] } },
-          { last_message_at: -1 },
-          { limit: 30 }
-        );
-
-        // ✅ Format UI-friendly data
-        const formatted = userChannels.map((ch) => {
-          const other = Object.values(ch.state.members || {}).find(
-            (m: any) => m.user?.id !== user.id
-          ) as any;
-
-          return {
-            id: ch.id,
-            name: other?.user?.name || "Unknown",
-            username:
-              other?.user?.id?.slice(0, 8) ||
-              other?.user?.username ||
-              "unknown",
-            image: other?.user?.image || "/avatar.png",
-            lastMessageAt: ch.state.last_message_at,
-            unreadCount: ch.countUnread(),
-            clerkId: other?.user?.id,
-          };
-        });
-
-        if (active) {
-          setChannels(formatted);
-          setLoading(false);
-        }
-
-        // ✅ Real-time: move chat to top
-        client.on("message.new", (event) => {
-          const chanId = event.channel_id;
-          if (!chanId) return;
-
-          setChannels((prev) => {
-            const updated = [...prev];
-            const index = updated.findIndex((c) => c.id === chanId);
-            if (index !== -1) {
-              const [moved] = updated.splice(index, 1);
-              moved.lastMessageAt = new Date().toISOString();
-              moved.unreadCount = (moved.unreadCount ?? 0) + 1;
-              updated.unshift(moved);
-            }
-            return [...updated];
-          });
-        });
-      } catch (err) {
-        console.error("❌ Stream setup error:", err);
-        setLoading(false);
+    // 👇 Auto reconnect when user refocuses the window or navigates back
+    const handleFocus = () => {
+      if (!globalClient?.userID) {
+        console.log("👀 Refocus: reconnecting client...");
+        connectAndLoad();
       }
     };
 
-    initChatList();
-
+    window.addEventListener("focus", handleFocus);
     return () => {
-      active = false;
+      window.removeEventListener("focus", handleFocus);
     };
   }, [isLoaded, user]);
 
+  // ✅ Loader
   if (loading) return <ChatLoader />;
 
+  // ✅ Main UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-100 flex flex-col items-center py-12 px-4 transition-all">
       <h1 className="text-3xl sm:text-4xl font-bold text-indigo-700 mb-8 text-center drop-shadow-sm">
@@ -149,7 +173,7 @@ export default function ChatListPage() {
 // ===================================
 // ✅ ChatCard Component
 // ===================================
-function ChatCard({ chat }: { chat: any }) {
+function ChatCard({ chat }: { chat: ChatChannel }) {
   const isUnread = chat.unreadCount > 0;
 
   return (
@@ -181,7 +205,6 @@ function ChatCard({ chat }: { chat: any }) {
             >
               {chat.name}
             </h3>
-            <p className="text-sm text-gray-500"></p>
             {chat.lastMessageAt && (
               <p
                 className={`text-xs mt-1 italic ${

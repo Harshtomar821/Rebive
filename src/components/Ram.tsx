@@ -9,7 +9,7 @@ export default function Ram() {
         {/* Left Side Image */}
         <div className="w-1/3 h-auto">
           <img
-            src="/Ram.jpg"
+            src="/raam.webp"
             alt="Ram AI Assistant"
             className="object-cover w-full h-full aspect-[3/4]"
           />
