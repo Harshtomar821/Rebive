@@ -91,9 +91,12 @@ export default function ChatWithUser() {
   };
 
   return (
-    <div className="h-[93vh] relative bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-100 rounded-xl shadow-inner">
+  <div className="h-[93vh] relative z-[1] bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-100 rounded-xl shadow-inner">
+    <div className="relative z-[1] transition-all duration-500">
       <CallButton handleVideoCall={handleVideoCall} />
-      <Chat client={chatClient}>
+    </div>
+    <Chat client={chatClient}>
+
         <Channel channel={channel}>
           <Window>
             <ChannelHeader />
