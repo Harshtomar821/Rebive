@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server";
 import { StreamChat } from "stream-chat";
 
-interface ChatUser {
+export interface ChatUser {   
   id: string;
   clerkId: string;
   name?: string | null;
@@ -15,6 +15,12 @@ interface ChatUser {
   lastMessageAt?: string | null;
 }
 
+/**
+ * Returns a list of ChatUser for current user:
+ *  - includes followers and following (as before)
+ *  - if none found (or to supplement), falls back to DB active users (excluding self)
+ *  - attaches recent last message time from Stream if available
+ */
 export async function getChatUsers(): Promise<ChatUser[]> {
   try {
     const user = await currentUser();
@@ -24,12 +30,12 @@ export async function getChatUsers(): Promise<ChatUser[]> {
       where: { clerkId: user.id },
       select: { id: true, clerkId: true },
     });
-
     if (!dbUser) return [];
 
     const dbUserId = dbUser.id;
     const currentClerkId = dbUser.clerkId;
 
+    // fetch followers & following
     const [following, followers] = await Promise.all([
       prisma.follows.findMany({
         where: { followerId: dbUserId },
@@ -68,7 +74,7 @@ export async function getChatUsers(): Promise<ChatUser[]> {
     for (const f of followers) {
       const u = f.follower;
       if (u)
-        userMap.set(u.id, {
+        userMap.set(u.clerkId, {
           id: u.id,
           clerkId: u.clerkId,
           name: u.name,
@@ -83,7 +89,7 @@ export async function getChatUsers(): Promise<ChatUser[]> {
     for (const f of following) {
       const u = f.following;
       if (u)
-        userMap.set(u.id, {
+        userMap.set(u.clerkId, {
           id: u.id,
           clerkId: u.clerkId,
           name: u.name,
@@ -95,33 +101,56 @@ export async function getChatUsers(): Promise<ChatUser[]> {
         });
     }
 
-    userMap.delete(dbUserId);
-    let users = Array.from(userMap.values());
-    if (users.length === 0) return [];
+    // If no follow-based users, fallback to active DB users excluding self
+    if (userMap.size === 0) {
+      const others = await prisma.user.findMany({
+        where: { NOT: { clerkId: currentClerkId } },
+        select: {
+          id: true,
+          clerkId: true,
+          name: true,
+          username: true,
+          image: true,
+        },
+        take: 50,
+      });
+      for (const o of others) {
+        userMap.set(o.clerkId, {
+          id: o.id,
+          clerkId: o.clerkId,
+          name: o.name,
+          username: o.username,
+          image: o.image,
+          followersCount: 0,
+          followingCount: 0,
+          lastMessageAt: null,
+        });
+      }
+    }
 
+    // Attach Stream last_message_at if any
     const client = StreamChat.getInstance(
       process.env.NEXT_PUBLIC_STREAM_API_KEY!,
       process.env.STREAM_API_SECRET!
     );
 
-    const channels = await client.queryChannels({
-      members: { $in: [currentClerkId] },
-    });
+    const channels = await client.queryChannels(
+      { members: { $in: [currentClerkId] } },
+      { last_message_at: -1 },
+      { limit: 100 }
+    );
 
     const recentMap = new Map<string, Date>();
-
-    channels.forEach((ch) => {
-      const lastMsgAt = ch.state.last_message_at as Date | undefined;
-      if (!lastMsgAt) return;
-
-      const members = Object.keys(ch.state.members || {});
+    for (const ch of channels) {
+      const lastMsgAt = (ch as any).state?.last_message_at as Date | undefined;
+      if (!lastMsgAt) continue;
+      const members = Object.keys((ch as any).state?.members || {});
       const otherUserId = members.find((id) => id !== currentClerkId);
-      if (!otherUserId) return;
-
+      if (!otherUserId) continue;
       recentMap.set(otherUserId, lastMsgAt);
-    });
+    }
 
-    users = users.map((u) => ({
+    let users = Array.from(userMap.values()).map((u) => ({
       ...u,
       lastMessageAt:
         u.clerkId && recentMap.has(u.clerkId)
@@ -135,8 +164,8 @@ export async function getChatUsers(): Promise<ChatUser[]> {
           new Date(b.lastMessageAt).getTime() -
           new Date(a.lastMessageAt).getTime()
         );
-      else if (a.lastMessageAt) return -1;
-      else if (b.lastMessageAt) return 1;
+      if (a.lastMessageAt) return -1;
+      if (b.lastMessageAt) return 1;
       return (a.name || "").localeCompare(b.name || "");
     });
 
