@@ -1,8 +1,8 @@
-# Revibe 🎉
+# Revibe 
 
 A modern, feature-rich social media application built with cutting-edge web technologies. Connect with friends, share moments, chat in real-time, and interact with AI-powered chatbots.
 
-## 🚀 Features
+##  Features
 
 ### Core Social Features
 
@@ -34,7 +34,7 @@ A modern, feature-rich social media application built with cutting-edge web tech
 - **File Uploads** - Share images with posts via UploadThing
 - **Real-time Updates** - Automatic cache revalidation for fresh content
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 
@@ -63,7 +63,7 @@ A modern, feature-rich social media application built with cutting-edge web tech
 - **Date Handling**: date-fns
 - **Environment**: dotenv
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Node.js 18+ and npm/yarn
 - PostgreSQL database
@@ -73,7 +73,7 @@ A modern, feature-rich social media application built with cutting-edge web tech
 - Google Gemini API key
 - UploadThing credentials (optional, for file uploads)
 
-## 🔧 Installation & Setup
+##  Installation & Setup
 
 ### 1. Clone the Repository
 
@@ -137,7 +137,7 @@ yarn dev
 
 Visit `http://localhost:3000` to see your application.
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 revibe/
@@ -183,7 +183,7 @@ revibe/
 └── package.json             # Dependencies
 ```
 
-## 📊 Database Schema
+##  Database Schema
 
 ### User
 
@@ -221,7 +221,7 @@ revibe/
 - Tracks read status
 - Linked to posts or comments when relevant
 
-## 🚀 Available Scripts
+##  Available Scripts
 
 ```bash
 # Development
@@ -238,7 +238,7 @@ npx prisma migrate dev  # Create & run migrations
 npx prisma studio      # Open Prisma Studio UI
 ```
 
-## 🎨 Theme & Styling
+##  Theme & Styling
 
 - Built with **Tailwind CSS** for utility-first styling
 - **DaisyUI** components for enhanced UI
@@ -246,7 +246,7 @@ npx prisma studio      # Open Prisma Studio UI
 - Custom color scheme with CSS variables
 - Responsive grid system (mobile-first approach)
 
-## 🔐 Security Features
+##  Security Features
 
 - **Authentication**: Secure user authentication via Clerk
 - **Authorization**: Protected routes and API endpoints
@@ -254,7 +254,7 @@ npx prisma studio      # Open Prisma Studio UI
 - **Cascade Deletes**: Automatic cleanup of related records
 - **Unique Constraints**: Prevent duplicate likes and follows
 
-## 🚢 Deployment
+##  Deployment
 
 ### Deploy to Vercel (Recommended)
 
@@ -272,7 +272,7 @@ Ensure your platform supports:
 - PostgreSQL database access
 - Edge functions (optional, for middleware)
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -282,7 +282,7 @@ Contributions are welcome! Please follow these steps:
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+##  License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
@@ -312,7 +312,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Check API quota/rate limits
 - Ensure proper prompting in getGeminiReply
 
-## 🌟 Key Features Details
+##  Key Features Details
 
 ### Real-time Chat
 
@@ -335,7 +335,7 @@ Each AI bot has a unique personality:
 - **Ram**: Perfect for thoughtful, logical discussions
 - **Somya**: Ideal for emotional support and empathy
 
-## 📱 Mobile Optimization
+##  Mobile Optimization
 
 The application is fully responsive with:
 
@@ -344,7 +344,7 @@ The application is fully responsive with:
 - Adaptive layouts for all screen sizes
 - Optimized navigation for mobile devices
 
-## 🎯 Future Enhancements
+##  Future Enhancements
 
 Potential features for future versions:
 
@@ -357,7 +357,7 @@ Potential features for future versions:
 - Trending topics
 - User badges and achievements
 
-## 💡 Tips & Best Practices
+##  Tips & Best Practices
 
 1. **Performance**: Posts are fetched with related data and ordered by creation date
 2. **UX**: Use skeleton loaders for better perceived performance
@@ -367,6 +367,6 @@ Potential features for future versions:
 
 ---
 
-**Built with ❤️ by the Revibe Team**
+**Built with ❤️ by the Harsh Tomar**
 
 For more information, visit the [documentation](https://nextjs.org/docs) or open an issue on GitHub.
